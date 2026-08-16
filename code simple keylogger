@@ -1,0 +1,69 @@
+# ============================================================
+# Simple Keystroke Logger — scoped to a single input box
+# Run each cell in order in Google Colab.
+# This only records keys typed into the widget below,
+# not anything typed elsewhere on your system.
+# ============================================================
+
+# --- Cell 1: Install/import dependencies ---
+import ipywidgets as widgets
+from IPython.display import display
+import datetime
+
+LOG_FILE = "keystroke_log.txt"
+
+# --- Cell 2: Create the widgets ---
+text_box = widgets.Text(
+    description="Type here:",
+    placeholder="Start typing...",
+    layout=widgets.Layout(width="400px")
+)
+output = widgets.Output()
+
+# Keep track of the previous value so we can detect what changed
+prev_value = ""
+
+def log_keystrokes(change):
+    """
+    Fires every time the text box's value changes.
+    Compares old vs new value to infer the key(s) typed,
+    then appends that to a log file with a timestamp.
+    """
+    global prev_value
+    new_value = change["new"]
+    old_value = change["old"]
+
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Simple diff: figure out what was added/removed
+    if len(new_value) > len(old_value):
+        # Character(s) added — usually the newly typed key(s)
+        added = new_value[len(old_value):]
+        event = f"[{timestamp}] KEY ADDED: {added!r}"
+    elif len(new_value) < len(old_value):
+        event = f"[{timestamp}] KEY DELETED (backspace/cut)"
+    else:
+        event = f"[{timestamp}] TEXT CHANGED: {new_value!r}"
+
+    with open(LOG_FILE, "a") as f:
+        f.write(event + "\n")
+
+    with output:
+        print(event)
+
+    prev_value = new_value
+
+text_box.observe(log_keystrokes, names="value")
+
+# --- Cell 3: Display the widget ---
+display(text_box, output)
+
+# --- Cell 4 (run after you're done typing): View the saved log ---
+def show_log():
+    try:
+        with open(LOG_FILE, "r") as f:
+            print(f.read())
+    except FileNotFoundError:
+        print("No log file yet — type something in the box first.")
+
+# show_log()  # uncomment and run this cell after typing to see the saved log
